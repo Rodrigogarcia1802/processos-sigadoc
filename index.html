@@ -55,19 +55,46 @@ window.addEventListener('load', function(){
   .dot-live{width:7px;height:7px;background:#4ade80;border-radius:50%;box-shadow:0 0 6px #4ade80;animation:pulso 2s infinite}
   @keyframes pulso{0%,100%{opacity:1}50%{opacity:.3}}
 
+  /* Badge de origem dos dados */
+  .origem-badge{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:4px 10px;border-radius:20px;font-size:.67rem;font-weight:700;
+    letter-spacing:.05em;text-transform:uppercase;cursor:default;
+  }
+  .origem-badge.cache{
+    background:rgba(255,193,7,.15);border:1px solid rgba(255,193,7,.35);color:#FFD060;
+  }
+  .origem-badge.novo{
+    background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.35);color:#4ade80;
+  }
+
   .btn-importar{position:relative;overflow:hidden}
   .btn-importar input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
   .toast{position:fixed;bottom:2rem;right:2rem;background:#1a7a3c;color:#fff;padding:.9rem 1.5rem;border-radius:8px;font-size:.85rem;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.25);display:none;z-index:9999;animation:fadeIn .3s ease}
   .toast.erro{background:#c0392b}
+  .toast.aviso{background:#c9850a}
   @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
   .live-row{display:flex;align-items:center;gap:6px;color:rgba(255,255,255,.65);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em}
   .btn{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);color:#F3F7FB;padding:7px 16px;border-radius:8px;font-family:'Barlow',sans-serif;font-weight:600;font-size:.78rem;cursor:pointer;letter-spacing:.05em;transition:all .2s;display:flex;align-items:center;gap:6px}
   .btn:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.28)}
+  .btn-limpar{background:rgba(192,57,43,.20);border-color:rgba(192,57,43,.40);color:#FFB0A8}
+  .btn-limpar:hover{background:rgba(192,57,43,.32);border-color:rgba(192,57,43,.60)}
 
   .main{padding:1.6rem 2.5rem 4rem;max-width:1700px;margin:0 auto}
 
-  /* MÉTRICAS — agora 6 cards */
+  /* Banner de cache */
+  .cache-banner{
+    background:rgba(255,193,7,.08);border:1px solid rgba(255,193,7,.25);
+    border-radius:10px;padding:.75rem 1.2rem;margin-bottom:1.2rem;
+    display:flex;align-items:center;justify-content:space-between;gap:1rem;
+    font-size:.78rem;color:#7A5C00;
+  }
+  .cache-banner strong{color:#5A4200}
+  .cache-banner.oculto{display:none}
+  .cache-banner-txt{display:flex;align-items:center;gap:.6rem}
+
+  /* MÉTRICAS */
   .metricas{display:grid;grid-template-columns:repeat(6,1fr);gap:1rem;margin-bottom:1.6rem}
   .mcard{background:var(--branco);border-radius:12px;padding:1.1rem 1.3rem;border:1px solid var(--borda);border-top:3px solid var(--azul-med);box-shadow:0 2px 10px rgba(22,58,95,.06);position:relative;overflow:hidden;transition:all .2s}
   .mcard:hover{box-shadow:0 6px 18px rgba(22,58,95,.10)}
@@ -127,8 +154,6 @@ window.addEventListener('load', function(){
   .dias.at{color:var(--at-c)} .dias.ae{color:var(--ae-c)} .dias.ok{color:var(--ok-c)} .dias.sp{color:var(--sp-c)}
   .dcell{max-width:270px} .dcell span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4}
   .rname{font-size:.7rem;color:var(--txt3)}
-
-  /* Badge de prazo na tabela */
   .bprazo{display:inline-block;padding:1px 6px;border-radius:3px;font-size:.63rem;font-weight:600;background:#eef2f8;color:var(--txt3);border:1px solid #d8e2ee;margin-top:2px}
 
   .pgbar{display:flex;align-items:center;justify-content:space-between;padding:.7rem 1.3rem;border-top:1px solid var(--borda);background:#f8fafd;font-size:.76rem;color:var(--txt3)}
@@ -163,7 +188,12 @@ window.addEventListener('load', function(){
   </div>
   <div class="h-right">
     <div class="live-row"><div class="dot-live"></div>Dados em tempo real</div>
-    <div class="update-box">Última atualização<span id="hora">—</span></div>
+    <!-- Badge dinâmico de origem dos dados -->
+    <span class="origem-badge oculto" id="origemBadge"></span>
+    <div class="update-box">Última importação<span id="hora">—</span></div>
+    <button class="btn btn-limpar oculto" id="btnLimpar" onclick="limparCache()" title="Remove os dados salvos e retorna ao estado vazio">
+      🗑️ Limpar Cache
+    </button>
     <label class="btn btn-importar" title="Selecione o arquivo Excel (.xlsx) para atualizar o dashboard">
       📂 Importar Excel
       <input type="file" accept=".xlsx,.xls" onchange="importarExcel(event)">
@@ -174,7 +204,15 @@ window.addEventListener('load', function(){
 <main class="main">
   <div class="toast" id="toast"></div>
 
-  <!-- 6 métricas: Total | Atrasados | Atenção | No Prazo | Pend. Assinatura | Sem Prazo -->
+  <!-- Banner de aviso quando os dados vêm do cache -->
+  <div class="cache-banner oculto" id="cacheBanner">
+    <div class="cache-banner-txt">
+      <span style="font-size:1.1rem">💾</span>
+      <span>Exibindo dados da <strong>última planilha importada</strong> em <strong id="cacheData">—</strong>. Para atualizar, importe um novo arquivo Excel.</span>
+    </div>
+  </div>
+
+  <!-- 6 métricas -->
   <div class="metricas">
     <div class="mcard"><div class="m-ico">📋</div><div class="m-lbl">Total de Processos</div><div class="m-val" id="m0">—</div><div class="m-sub">em aberto no sistema</div></div>
     <div class="mcard at"><div class="m-ico">🔴</div><div class="m-lbl">Atrasados</div><div class="m-val" id="m1">—</div><div class="m-sub">prazo excedido</div></div>
@@ -236,11 +274,16 @@ window.addEventListener('load', function(){
 
 <script>
 // ══════════════════════════════════════════════════════════════
+//  CHAVES DE ARMAZENAMENTO LOCAL
+// ══════════════════════════════════════════════════════════════
+const STORAGE_KEY_DADOS = 'sejus_cti_dados_v1';
+const STORAGE_KEY_TS    = 'sejus_cti_timestamp_v1';
+
+// ══════════════════════════════════════════════════════════════
 //  CONSTANTES
 // ══════════════════════════════════════════════════════════════
 const SEM_PRAZO = "Sem prazo definido / Não se aplica";
 
-// Mapa: texto do Prazo Previsto → número de dias
 const PRAZOS_DIAS = {
   "2 dias (Demanda Urgente)": 2,
   "5 dias":  5,
@@ -250,13 +293,7 @@ const PRAZOS_DIAS = {
 };
 
 // ══════════════════════════════════════════════════════════════
-//  FUNÇÃO DE CATEGORIZAÇÃO (CORRIGIDA)
-//  Categorias:
-//    'sp' = Sem prazo definido / Não se aplica  ← NUNCA atrasado
-//    'at' = Atrasado (dias >= prazo em dias)
-//    'ae' = Atenção  (dias >= 70% do prazo)
-//    'ok' = No prazo
-//    'pa' = Pendente de Assinatura
+//  CATEGORIZAÇÃO
 // ══════════════════════════════════════════════════════════════
 function cat(p) {
   const status  = (p['Status'] || '').toLowerCase().trim();
@@ -264,29 +301,19 @@ function cat(p) {
   const alerta  = (p['Alerta'] || '').trim();
   const dias    = parseInt(p['Dias em Aberto']) || 0;
 
-  // Pendente de assinatura tem prioridade visual
   if (status.includes('assinatura') || status.includes('pendente de assinatura')) return 'pa';
-
-  // ── REGRA CENTRAL ──────────────────────────────────────────
-  // Se prazo for "Sem prazo definido / Não se aplica" (ou vazio),
-  // o processo NUNCA deve aparecer como atrasado.
-  // ──────────────────────────────────────────────────────────
   if (!prazo || prazo === SEM_PRAZO) return 'sp';
 
-  // Se tem prazo definido, usa o campo Alerta da planilha quando disponível
   if (alerta.includes('ATRASADO') || alerta.includes('🔴')) return 'at';
   if (alerta.includes('ATENÇÃO')  || alerta.includes('🟡')) return 'ae';
   if (alerta.includes('OK')       || alerta.includes('🟢')) return 'ok';
 
-  // Fallback: calcula pelo prazo em dias (para dados sem campo Alerta preenchido)
   const prazoDias = PRAZOS_DIAS[prazo];
   if (prazoDias !== undefined) {
-    if (dias >= prazoDias)            return 'at';
-    if (dias >= prazoDias * 0.7)      return 'ae';
+    if (dias >= prazoDias)       return 'at';
+    if (dias >= prazoDias * 0.7) return 'ae';
     return 'ok';
   }
-
-  // Prazo desconhecido → sem prazo
   return 'sp';
 }
 
@@ -298,21 +325,123 @@ const PP = 20;
 let colOrd = 'dias', asc = false;
 let graficos = {};
 
-// ── Helpers ──────────────────────────────────────────────────
 function sigla(n){ return n.trim().split(' ').map(p=>p[0]).filter(Boolean).slice(0,2).join('').toUpperCase()||'?'; }
 function nomeCurto(n){ const p=n.split(' '); return p[0]+' '+p[p.length-1]; }
 
 // ══════════════════════════════════════════════════════════════
+//  PERSISTÊNCIA — salvar / carregar / limpar
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * Salva os dados processados no localStorage junto com o timestamp.
+ */
+function salvarCache(dados) {
+  try {
+    localStorage.setItem(STORAGE_KEY_DADOS, JSON.stringify(dados));
+    localStorage.setItem(STORAGE_KEY_TS, new Date().toISOString());
+  } catch(e) {
+    // Quota excedida ou modo privado sem suporte a localStorage
+    console.warn('Não foi possível salvar no cache local:', e.message);
+    mostrarToast('⚠️ Cache não salvo: armazenamento local indisponível ou cheio.', 'aviso');
+  }
+}
+
+/**
+ * Carrega os dados do cache, retornando { dados, timestamp } ou null.
+ */
+function carregarCache() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_DADOS);
+    const ts  = localStorage.getItem(STORAGE_KEY_TS);
+    if (!raw) return null;
+    return { dados: JSON.parse(raw), timestamp: ts };
+  } catch(e) {
+    console.warn('Erro ao ler cache:', e.message);
+    return null;
+  }
+}
+
+/**
+ * Remove todos os dados salvos e redefine o painel para o estado vazio.
+ */
+function limparCache() {
+  if (!confirm('Deseja remover os dados salvos? O painel voltará ao estado vazio e precisará de nova importação.')) return;
+  try {
+    localStorage.removeItem(STORAGE_KEY_DADOS);
+    localStorage.removeItem(STORAGE_KEY_TS);
+  } catch(e) { /* ignora */ }
+  estadoVazio();
+  mostrarToast('🗑️ Cache removido. Importe uma nova planilha para continuar.');
+}
+
+// ══════════════════════════════════════════════════════════════
 //  INICIALIZAR
 // ══════════════════════════════════════════════════════════════
-function inicializar(dados) {
+
+/**
+ * Recebe os dados processados, exibe o painel completo e, opcionalmente,
+ * marca visualmente a origem (cache ou upload recente).
+ */
+function inicializar(dados, origemCache) {
   todos = dados;
   popularSelects();
   filtrar();
   renderGraficos();
   renderResponsaveis();
+
+  // Determina o timestamp correto para exibição
+  let ts;
+  if (origemCache) {
+    const cached = carregarCache();
+    ts = cached && cached.timestamp ? new Date(cached.timestamp) : new Date();
+  } else {
+    ts = new Date();
+  }
+
+  const horaFmt = ts.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+                + ' · ' + ts.toLocaleDateString('pt-BR');
+  document.getElementById('hora').textContent = horaFmt;
+  document.getElementById('dataRodape').textContent = ts.toLocaleDateString('pt-BR');
+
+  // Exibe o badge de origem e o botão de limpar
+  const badge = document.getElementById('origemBadge');
+  const btnL  = document.getElementById('btnLimpar');
+  badge.classList.remove('oculto');
+  btnL.classList.remove('oculto');
+
+  if (origemCache) {
+    badge.className = 'origem-badge cache';
+    badge.textContent = '💾 Dados em Cache';
+    const banner = document.getElementById('cacheBanner');
+    banner.classList.remove('oculto');
+    document.getElementById('cacheData').textContent = horaFmt;
+  } else {
+    badge.className = 'origem-badge novo';
+    badge.textContent = '✅ Dados Atualizados';
+    document.getElementById('cacheBanner').classList.add('oculto');
+  }
+}
+
+/**
+ * Exibe o painel no estado vazio (sem dados importados).
+ */
+function estadoVazio() {
+  todos = []; filtrados = [];
+  ['m0','m1','m2','m3','m4','m5'].forEach(id => document.getElementById(id).textContent = '0');
+  document.getElementById('nFiltrado').textContent = '0';
+  document.getElementById('tbody').innerHTML =
+    '<tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--txt3)">📂 Importe a planilha Excel para visualizar os processos.</td></tr>';
+  document.getElementById('pgInfo').textContent = '';
+  document.getElementById('pgBtns').innerHTML = '';
+  document.getElementById('respGrid').innerHTML = '';
+  document.getElementById('cacheBanner').classList.add('oculto');
+  document.getElementById('origemBadge').classList.add('oculto');
+  document.getElementById('btnLimpar').classList.add('oculto');
+  Object.values(graficos).forEach(g => { try { g.destroy(); } catch(e){} });
+  graficos = {};
   const agora = new Date();
-  document.getElementById('hora').textContent = agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+' · '+agora.toLocaleDateString('pt-BR');
+  document.getElementById('hora').textContent =
+    agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+' · '+agora.toLocaleDateString('pt-BR');
   document.getElementById('dataRodape').textContent = agora.toLocaleDateString('pt-BR');
 }
 
@@ -322,7 +451,7 @@ function popularSelects() {
   const st = document.getElementById('fTipo');
   st.innerHTML = '<option value="">Todos os Tipos</option>'+tipos.map(t=>`<option value="${t}">${t}</option>`).join('');
   const sr = document.getElementById('fResp');
-  sr.innerHTML = '<option value="">Todos os Responsáveis</option>'+resps.map(r=>`<option value="${r}">${nomeCurto(r)}</option>`).join('');
+  sr.innerHTML = '<option value="">Todos os Responsáveis</option>'+resps.map(r=>`<option value="${nomeCurto(r)}">${nomeCurto(r)}</option>`).join('');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -337,10 +466,10 @@ function filtrar() {
   filtrados = todos.filter(p => {
     const c   = cat(p);
     const txt = [p['Número do Documento'],p['Assunto / Descrição'],p['Responsável CTI']].join(' ').toLowerCase();
-    if (b  && !txt.includes(b))          return false;
-    if (fs && c !== fs)                  return false;
-    if (ft && p['Tipo'] !== ft)          return false;
-    if (fr && p['Responsável CTI'] !== fr) return false;
+    if (b  && !txt.includes(b))   return false;
+    if (fs && c !== fs)            return false;
+    if (ft && p['Tipo'] !== ft)    return false;
+    if (fr && nomeCurto(p['Responsável CTI']||'') !== fr) return false;
     return true;
   });
   ordenar_arr();
@@ -363,7 +492,7 @@ function ordenar_arr() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  MÉTRICAS (6 cards)
+//  MÉTRICAS
 // ══════════════════════════════════════════════════════════════
 function atualizarMetricas() {
   const all = todos;
@@ -380,11 +509,8 @@ function atualizarMetricas() {
 //  TABELA
 // ══════════════════════════════════════════════════════════════
 const LBL = {
-  at: '🔴 Atrasado',
-  ae: '🟡 Atenção',
-  ok: '🟢 No Prazo',
-  pa: '✍️ Pend. Assinatura',
-  sp: '⚪ Sem Prazo',
+  at:'🔴 Atrasado', ae:'🟡 Atenção', ok:'🟢 No Prazo',
+  pa:'✍️ Pend. Assinatura', sp:'⚪ Sem Prazo',
 };
 
 function renderTabela() {
@@ -446,7 +572,6 @@ function renderGraficos() {
     const r = p['Responsável CTI']||'N/A'; resp[r]=(resp[r]||0)+1;
   });
 
-  // Status doughnut — exclui 'sp' do gráfico de pizza para não poluir
   if (graficos.s) graficos.s.destroy();
   const cs = document.getElementById('gStatus').getContext('2d');
   const clr = {at:'#c0392b',ae:'#c9850a',ok:'#1a7a3c',pa:'#6b4fa0',sp:'#8fa3b8'};
@@ -454,7 +579,6 @@ function renderGraficos() {
   const se  = Object.entries(cnt).filter(e=>e[1]>0);
   graficos.s = new Chart(cs, {type:'doughnut',data:{labels:se.map(e=>lbl[e[0]]),datasets:[{data:se.map(e=>e[1]),backgroundColor:se.map(e=>clr[e[0]]),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10,usePointStyle:true}}}}});
 
-  // Tipo bar horizontal
   if (graficos.t) graficos.t.destroy();
   const ct = document.getElementById('gTipo').getContext('2d');
   const te = Object.entries(tipo).sort((a,b)=>b[1]-a[1]);
@@ -462,7 +586,6 @@ function renderGraficos() {
   const teL = te.map(e=>e[0].split(' - ')[0]||e[0]);
   graficos.t = new Chart(ct, {type:'bar',data:{labels:teL,datasets:[{data:te.map(e=>e[1]),backgroundColor:te.map((_,i)=>tc[i%tc.length]),borderRadius:4}]},options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}},grid:{color:'#eef1f7'}},y:{ticks:{font:{size:11}}}}}});
 
-  // Responsável bar
   if (graficos.r) graficos.r.destroy();
   const cr = document.getElementById('gResp').getContext('2d');
   const re = Object.entries(resp).sort((a,b)=>b[1]-a[1]).slice(0,8);
@@ -507,12 +630,14 @@ function renderResponsaveis() {
 // ══════════════════════════════════════════════════════════════
 //  IMPORTAR EXCEL
 // ══════════════════════════════════════════════════════════════
-function mostrarToast(msg, erro=false) {
+function mostrarToast(msg, tipo='ok') {
   const t = document.getElementById('toast');
   t.textContent = msg;
-  t.className = 'toast'+(erro?' erro':'');
+  t.className = 'toast';
+  if (tipo === 'erro')  t.classList.add('erro');
+  if (tipo === 'aviso') t.classList.add('aviso');
   t.style.display = 'block';
-  setTimeout(()=>t.style.display='none', 4000);
+  setTimeout(()=>t.style.display='none', 4500);
 }
 
 function importarExcel(event) {
@@ -520,14 +645,14 @@ function importarExcel(event) {
   if (!file) return;
 
   if (typeof XLSX === 'undefined') {
-    mostrarToast('❌ Biblioteca não carregada. Verifique sua conexão com a internet.', true);
+    mostrarToast('Biblioteca não carregada. Verifique sua conexão com a internet.', 'erro');
     event.target.value = '';
     return;
   }
 
   const ext = file.name.split('.').pop().toLowerCase();
   if (!['xlsx','xls'].includes(ext)) {
-    mostrarToast('❌ Arquivo inválido. Envie um arquivo .xlsx ou .xls', true);
+    mostrarToast('Arquivo inválido. Envie um arquivo .xlsx ou .xls', 'erro');
     event.target.value = '';
     return;
   }
@@ -538,27 +663,25 @@ function importarExcel(event) {
       const data = new Uint8Array(e.target.result);
       const wb   = XLSX.read(data, {type:'array', cellDates:true});
 
-      // Procura aba "Controle de Processos"
       const abaAlvo = wb.SheetNames.find(n => n.toLowerCase().includes('controle')) || wb.SheetNames[0];
       const ws      = wb.Sheets[abaAlvo];
       const rows    = XLSX.utils.sheet_to_json(ws, {defval:'', raw:false});
 
-      // Mapeamento de colunas (aceita variações de nome)
       const COLUNAS = {
-        'Número do Documento':    ['Número do Documento','Numero do Documento','número do documento'],
-        'Tipo':                   ['Tipo','tipo'],
-        'Data de Entrada na CTI': ['Data de Entrada na CTI','Data Entrada','Data de Entrada'],
-        'Assunto / Descrição':    ['Assunto / Descrição','Assunto','Descrição'],
-        'Anotação / Instrução':   ['Anotação / Instrução','Anotação','Instrução'],
-        'Responsável CTI':        ['Responsável CTI','Responsavel CTI','Responsável'],
-        'Status':                 ['Status','status'],
-        'Dias em Aberto':         ['Dias em Aberto','Dias','dias em aberto'],
-        'Alerta':                 ['Alerta','alerta'],
-        'Prazo Previsto':         ['Prazo Previsto','prazo previsto','Prazo'],
-        'Setor Destino':          ['Setor Destino'],
-        'Data Encaminhamento':    ['Data Encaminhamento'],
-        'Data Retorno / Conclusão':['Data Retorno / Conclusão','Data Retorno'],
-        'Observações':            ['Observações','Observacoes'],
+        'Número do Documento':      ['Número do Documento','Numero do Documento','número do documento'],
+        'Tipo':                     ['Tipo','tipo'],
+        'Data de Entrada na CTI':   ['Data de Entrada na CTI','Data Entrada','Data de Entrada'],
+        'Assunto / Descrição':      ['Assunto / Descrição','Assunto','Descrição'],
+        'Anotação / Instrução':     ['Anotação / Instrução','Anotação','Instrução'],
+        'Responsável CTI':          ['Responsável CTI','Responsavel CTI','Responsável'],
+        'Status':                   ['Status','status'],
+        'Dias em Aberto':           ['Dias em Aberto','Dias','dias em aberto'],
+        'Alerta':                   ['Alerta','alerta'],
+        'Prazo Previsto':           ['Prazo Previsto','prazo previsto','Prazo'],
+        'Setor Destino':            ['Setor Destino'],
+        'Data Encaminhamento':      ['Data Encaminhamento'],
+        'Data Retorno / Conclusão': ['Data Retorno / Conclusão','Data Retorno'],
+        'Observações':              ['Observações','Observacoes'],
       };
 
       function acharCampo(row, opcoes) {
@@ -585,15 +708,17 @@ function importarExcel(event) {
         });
 
       if (dados.length === 0) {
-        mostrarToast('⚠️ Nenhum dado encontrado. Verifique se a planilha tem a aba "Controle de Processos".', true);
+        mostrarToast('Nenhum dado encontrado. Verifique se a planilha tem a aba "Controle de Processos".', 'aviso');
         event.target.value = '';
         return;
       }
 
-      inicializar(dados);
-      mostrarToast(`✅ ${dados.length} processos carregados com sucesso!`);
+      // Salva no cache ANTES de inicializar (passa origemCache=false = upload novo)
+      salvarCache(dados);
+      inicializar(dados, false);
+      mostrarToast(`✅ ${dados.length} processos carregados e salvos com sucesso!`);
     } catch(err) {
-      mostrarToast('❌ Erro ao ler o arquivo: ' + err.message, true);
+      mostrarToast('Erro ao ler o arquivo: ' + err.message, 'erro');
     }
     event.target.value = '';
   };
@@ -601,31 +726,29 @@ function importarExcel(event) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  DADOS EMBUTIDOS (snapshot do Excel — substitua importando)
+//  DADOS EMBUTIDOS (snapshot fixo — opcional)
 // ══════════════════════════════════════════════════════════════
 const DADOS_BASE = [];
 
 // ══════════════════════════════════════════════════════════════
-//  INÍCIO
+//  INÍCIO — prioridade: DADOS_BASE > cache > estado vazio
 // ══════════════════════════════════════════════════════════════
 (function(){
   if (DADOS_BASE.length) {
-    inicializar(DADOS_BASE);
-  } else {
-    // Sem dados embutidos: exibe estado vazio e aguarda importação
-    document.getElementById('m0').textContent = '0';
-    document.getElementById('m1').textContent = '0';
-    document.getElementById('m2').textContent = '0';
-    document.getElementById('m3').textContent = '0';
-    document.getElementById('m4').textContent = '0';
-    document.getElementById('m5').textContent = '0';
-    document.getElementById('nFiltrado').textContent = '0';
-    document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--txt3)">📂 Importe a planilha Excel para visualizar os processos.</td></tr>';
-    const agora = new Date();
-    document.getElementById('hora').textContent = agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+' · '+agora.toLocaleDateString('pt-BR');
-    document.getElementById('dataRodape').textContent = agora.toLocaleDateString('pt-BR');
+    // Dados fixos embutidos no código (snapshot manual)
+    inicializar(DADOS_BASE, false);
+    return;
   }
+
+  // Tenta recuperar do cache local (última planilha importada)
+  const cache = carregarCache();
+  if (cache && cache.dados && cache.dados.length > 0) {
+    inicializar(cache.dados, true);
+    return;
+  }
+
+  // Sem dados: exibe estado vazio e aguarda importação
+  estadoVazio();
 })();
 </script>
 </body>
